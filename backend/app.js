@@ -20,8 +20,6 @@ app.use(bodyParser.json());
 app.use('/images', express.static(path.join(__dirname, 'images')));
 //modficitation utiliser un fichier .env
 mongoose.connect('mongodb+srv://'+process.env.DB_USER+':'+process.env.DB_PASSWORD+'@cluster0.ngsg03j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-.then(() => console.log('Connexion à MongoDB réussie !'))
-.catch((error) => console.error('Connexion à MongoDB échouée !', error));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/books', booksRoutes);

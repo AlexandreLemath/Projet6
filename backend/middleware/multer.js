@@ -3,17 +3,15 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
-// Types MIME autorisés
 const MIME_TYPES = {
     'image/jpg': 'jpg',
     'image/jpeg': 'jpeg',
     'image/png': 'png',
 };
 
-// Configuration du stockage avec Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'images'); // Dossier de destination
+        cb(null, 'images'); 
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -22,52 +20,46 @@ const storage = multer.diskStorage({
     }
 });
 
-// Initialiser Multer avec les limites de taille et le filtre de fichier
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 4 * 1024 * 1024 }, // Taille max de 4 Mo
+    limits: { fileSize: 4 * 1024 * 1024 }, 
     fileFilter: (req, file, cb) => {
         if (MIME_TYPES[file.mimetype]) {
-            cb(null, true); // Accepter les fichiers avec un type MIME valide
+            cb(null, true);e
         } else {
-            cb(new Error('Type de fichier invalide'), false); // Rejeter les fichiers non autorisés
+            cb(new Error('Type de fichier invalide'), false); 
         }
     }
 });
 
-// Middleware pour redimensionner l'image avec Sharp et convertir en WebP
 const resizeImage = (req, res, next) => {
     if (!req.file) {
-        return next(); // Si pas de fichier, passer au middleware suivant
+        return next(); 
     }
 
-    const filePath = req.file.path; // Chemin de l'image originale
-    const fileName = req.file.filename.split('.')[0]; // Nom du fichier sans extension
-    const outputFileName = `resized_${fileName}.webp`; // Nom du fichier WebP
-    const outputPath = path.join('images', outputFileName); // Chemin de sortie en WebP
-
+    const filePath = req.file.path; 
+    const fileName = req.file.filename.split('.')[0]; 
+    const outputFileName = `resized_${fileName}.webp`; 
+    const outputPath = path.join('images', outputFileName); 
     sharp(filePath)
         .resize({
-            width: 206, // Largeur cible
-            height: 260, // Hauteur cible
-            fit: 'cover' // Mode de redimensionnement
+            width: 206, 
+            height: 260, 
+            fit: 'cover' 
         })
-        .webp() // Convertir en WebP
-        .toFile(outputPath) // Sauvegarder l'image convertie en WebP
+        .webp() 
+        .toFile(outputPath)
         .then(() => {
-            // Supprimer le fichier original après redimensionnement et conversion
             fs.unlink(filePath, (err) => {
                 if (err) {
-                    console.error(err);
                     return next(err);
                 }
-                req.file.path = outputPath; // Mettre à jour le chemin du fichier pour pointer vers le fichier WebP
-                req.file.filename = outputFileName; // Mettre à jour le nom du fichier
-                next(); // Passer au middleware suivant
+                req.file.path = outputPath; 
+                req.file.filename = outputFileName; 
+                next(); 
             });
         })
         .catch(err => {
-            console.error(err);
             return next(err); // Gérer l'erreur
         });
 };

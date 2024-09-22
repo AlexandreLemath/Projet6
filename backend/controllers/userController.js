@@ -24,7 +24,6 @@ exports.signup = async (req, res) => {
     await newUser.save();
     return res.status(201).json({ message: 'Utilisateur créé avec succès' });
   } catch (error) {
-    console.error("Erreur lors de l'inscription:", error); 
     return res.status(500).json({ message: 'Erreur du serveur lors de l\'inscription' });
   }
 };
@@ -51,7 +50,6 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
     return res.status(200).json({ userId: user._id, token });
   } catch (error) {
-    console.error("Erreur lors de la connexion:", error); 
     return res.status(500).json({ message: 'Erreur du serveur lors de la connexion' });
   }
 };

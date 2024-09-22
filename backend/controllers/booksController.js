@@ -1,6 +1,6 @@
 const Books = require("../models/Books");
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 exports.getAllBooks = async (req, res) => {
   try {
     const books = await Books.find();
@@ -32,11 +32,11 @@ exports.createBook = async (req, res) => {
       ...bookData,
       userId: req.user.userId,
       imageUrl: imageUrl,
-      ratings: bookData.ratings || [], // Initialiser `ratings` comme un tableau vide si absent
+      ratings: bookData.ratings || [],
       averageRating:
         bookData.ratings && bookData.ratings.length > 0
           ? bookData.ratings[0].grade
-          : 0, // Si des évaluations existent, utiliser la première pour calculer la note moyenne
+          : 0,
     });
 
     await newBook.save();
@@ -72,6 +72,11 @@ exports.updateBook = async (req, res) => {
   try {
     const bookId = req.params.id;
 
+    const existingBook = await Books.findById(bookId);
+    if (!existingBook) {
+      return res.status(404).json({ message: "Livre non trouvé" });
+    }
+
     const hasFile = req.file != null;
     let bookData;
 
@@ -81,6 +86,13 @@ exports.updateBook = async (req, res) => {
         req.file.filename
       }`;
       bookData.imageUrl = imageUrl;
+
+      if (existingBook.imageUrl) {
+        const oldImageName = path.basename(existingBook.imageUrl);
+        const oldImagePath = path.join(__dirname, "..", "images", oldImageName);
+
+        await fs.promises.unlink(oldImagePath);
+      }
     } else {
       bookData = req.body;
     }
@@ -104,9 +116,9 @@ exports.updateBook = async (req, res) => {
       .json({ message: "Erreur du serveur lors de la mise à jour du livre" });
   }
 };
+
 exports.bestBook = async (req, res) => {
   try {
-    // Rechercher les 3 livres ayant la meilleure note moyenne
     const topThreeBooks = await Books.find()
       .sort({ averageRating: -1 })
       .limit(3);
@@ -117,24 +129,17 @@ exports.bestBook = async (req, res) => {
 
     return res.status(200).json(topThreeBooks);
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        message:
-          "Erreur du serveur lors de la récupération des meilleurs livres",
-      });
+    return res.status(500).json({
+      message: "Erreur du serveur lors de la récupération des meilleurs livres",
+    });
   }
 };
 
 exports.addRating = async (req, res) => {
   try {
-    console.log("test de rating");
-    const bookId = req.params.id; // ID du livre récupéré depuis l'URL
-    const { userId, rating } = req.body; // ID de l'utilisateur et la note récupérés depuis le corps de la requête
-    console.log(userId);
-    console.log(rating);
+    const bookId = req.params.id;
+    const { userId, rating } = req.body;
 
-    // Vérifier que la note est un nombre entre 0 et 5
     const grade = Number(rating);
     if (isNaN(grade) || grade < 0 || grade > 5) {
       return res
@@ -162,7 +167,6 @@ exports.addRating = async (req, res) => {
 
     return res.status(201).json(bookUptaded);
   } catch (error) {
-    console.error("Erreur lors de l'envoi de la note :", error);
     return res
       .status(500)
       .json({ message: "Erreur lors de l'envoi de la note." });
@@ -171,30 +175,26 @@ exports.addRating = async (req, res) => {
 
 exports.deleteBooks = async (req, res) => {
   try {
-      const bookId = req.params.id;
+    const bookId = req.params.id;
 
-      // Rechercher le livre par son ID
-      const book = await Books.findById(bookId);
-      if (!book) {
-          return res.status(404).json({ message: 'Livre non trouvé' });
-      }
+    const book = await Books.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ message: "Livre non trouvé" });
+    }
 
-      // Supprimer l'image associée si elle existe
-      if (book.image) {
-          const imagePath = path.join(__dirname, '..', 'images', book.image);
-          fs.unlink(imagePath, (err) => {
-              if (err) {
-                  console.error("Erreur lors de la suppression de l'image :", err);
-              }
-          });
-      }
+    if (book.imageUrl) {
+      const imageName = path.basename(book.imageUrl);
+      const imagePath = path.join(__dirname, "..", "images", imageName);
 
-      // Supprimer le livre de la base de données
-      await Books.findByIdAndDelete(bookId);
+      await fs.promises.unlink(imagePath);
+    }
 
-      res.status(200).json({ message: 'Livre supprimé avec succès' });
+    await Books.findByIdAndDelete(bookId);
+
+    res.status(200).json({ message: "Livre supprimé avec succès" });
   } catch (error) {
-      console.error("Erreur lors de la suppression du livre :", error);
-      res.status(500).json({ message: 'Erreur du serveur lors de la suppression du livre' });
+    res
+      .status(500)
+      .json({ message: "Erreur du serveur lors de la suppression du livre" });
   }
 };
